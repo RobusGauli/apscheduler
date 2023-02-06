@@ -83,6 +83,7 @@ class BaseExecutor(six.with_metaclass(ABCMeta, object)):
         """
         with self._lock:
             self._instances[job_id] -= 1
+
             if self._instances[job_id] == 0:
                 del self._instances[job_id]
 
@@ -93,6 +94,7 @@ class BaseExecutor(six.with_metaclass(ABCMeta, object)):
         """Called by the executor with the exception if there is an error  calling `run_job`."""
         with self._lock:
             self._instances[job_id] -= 1
+
             if self._instances[job_id] == 0:
                 del self._instances[job_id]
 
@@ -108,16 +110,20 @@ def run_job(job, jobstore_alias, run_times, logger_name):
     """
     events = []
     logger = logging.getLogger(logger_name)
+
     for run_time in run_times:
         # See if the job missed its run time window, and handle
         # possible misfires accordingly
+
         if job.misfire_grace_time is not None:
             difference = datetime.now(utc) - run_time
             grace_time = timedelta(seconds=job.misfire_grace_time)
+
             if difference > grace_time:
                 events.append(JobExecutionEvent(EVENT_JOB_MISSED, job.id, jobstore_alias,
-                                                run_time))
+                                                run_time, job_meta=job.meta))
                 logger.warning('Run time of job "%s" was missed by %s', job, difference)
+
                 continue
 
         logger.info('Running job "%s" (scheduled at %s)', job, run_time)
@@ -127,10 +133,11 @@ def run_job(job, jobstore_alias, run_times, logger_name):
             exc, tb = sys.exc_info()[1:]
             formatted_tb = ''.join(format_tb(tb))
             events.append(JobExecutionEvent(EVENT_JOB_ERROR, job.id, jobstore_alias, run_time,
-                                            exception=exc, traceback=formatted_tb))
+                                            exception=exc, traceback=formatted_tb, job_meta=job.meta))
             logger.exception('Job "%s" raised an exception', job)
 
             # This is to prevent cyclic references that would lead to memory leaks
+
             if six.PY2:
                 sys.exc_clear()
                 del tb
@@ -140,7 +147,7 @@ def run_job(job, jobstore_alias, run_times, logger_name):
                 del tb
         else:
             events.append(JobExecutionEvent(EVENT_JOB_EXECUTED, job.id, jobstore_alias, run_time,
-                                            retval=retval))
+                                            retval=retval, job_meta=job.meta))
             logger.info('Job "%s" executed successfully', job)
 
     return events

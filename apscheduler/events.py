@@ -38,10 +38,11 @@ class SchedulerEvent(object):
     :ivar alias: alias of the job store or executor that was added or removed (if applicable)
     """
 
-    def __init__(self, code, alias=None):
+    def __init__(self, code, alias=None, job_meta=None):
         super(SchedulerEvent, self).__init__()
         self.code = code
         self.alias = alias
+        self.job_meta = job_meta
 
     def __repr__(self):
         return '<%s (code=%d)>' % (self.__class__.__name__, self.code)
@@ -56,11 +57,12 @@ class JobEvent(SchedulerEvent):
     :ivar jobstore: alias of the job store containing the job in question
     """
 
-    def __init__(self, code, job_id, jobstore):
-        super(JobEvent, self).__init__(code)
+    def __init__(self, code, job_id, jobstore, job_meta=None):
+        super(JobEvent, self).__init__(code, job_meta=job_meta)
         self.code = code
         self.job_id = job_id
         self.jobstore = jobstore
+        self.job_meta = job_meta
 
 
 class JobSubmissionEvent(JobEvent):
@@ -70,9 +72,10 @@ class JobSubmissionEvent(JobEvent):
     :ivar scheduled_run_times: a list of datetimes when the job was intended to run
     """
 
-    def __init__(self, code, job_id, jobstore, scheduled_run_times):
-        super(JobSubmissionEvent, self).__init__(code, job_id, jobstore)
+    def __init__(self, code, job_id, jobstore, scheduled_run_times, job_meta=None):
+        super(JobSubmissionEvent, self).__init__(code, job_id, jobstore, job_meta=job_meta)
         self.scheduled_run_times = scheduled_run_times
+        self.job_meta = job_meta
 
 
 class JobExecutionEvent(JobEvent):
@@ -85,10 +88,11 @@ class JobExecutionEvent(JobEvent):
     :ivar traceback: a formatted traceback for the exception
     """
 
-    def __init__(self, code, job_id, jobstore, scheduled_run_time, retval=None, exception=None,
+    def __init__(self, code, job_id, jobstore, scheduled_run_time, job_meta=None, retval=None, exception=None,
                  traceback=None):
-        super(JobExecutionEvent, self).__init__(code, job_id, jobstore)
+        super(JobExecutionEvent, self).__init__(code, job_id, jobstore, job_meta=job_meta)
         self.scheduled_run_time = scheduled_run_time
         self.retval = retval
         self.exception = exception
         self.traceback = traceback
+        self.job_meta = job_meta
